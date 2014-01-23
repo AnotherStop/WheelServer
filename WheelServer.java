@@ -5,6 +5,9 @@
  * --Yet another toy HTTP server
  * --Learning by reinventing the wheel
  *
+ * Running: $ javac WheelServer.java
+ *          $ java WheelServer [port]
+ *
  * Author: Bing Lu
  */
 
@@ -21,7 +24,15 @@ public class WheelServer{
         System.out.println("=========================================\n");
 
         //port that will be listened
-        int port = 80;
+        int port = 80;  //defaul port
+
+        //user specified port
+        if(args.length == 1){
+            int portArgs = Integer.parseInt(args[0]);
+            if(portArgs > 0 && portArgs < 65535)
+                port = portArgs;
+        }       
+
         ServerSocket serversocket = null;
 
         System.out.println("Start to listen on port " + Integer.toString(port) + "...");
@@ -31,7 +42,7 @@ public class WheelServer{
             serversocket = new ServerSocket(port);
         }
         catch(Exception e) { 
-            System.out.println("Fatal Error:" + e.getMessage());
+            System.out.println("Error:" + e.getMessage());
             return;
         }
         
