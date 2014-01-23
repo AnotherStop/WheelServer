@@ -17,74 +17,103 @@ import java.util.*;
 
 public class WheelServer{
 
-    public static void main(String[] args){
+    public static void main(String[] args){         
+
+        //port that will be listened
+        int port = 80;  //defaul port
+        //user specified port
+        if(args.length == 1){
+            int portArgs = Integer.parseInt(args[0]);
+            if(portArgs == 80 || (portArgs > 1024 && portArgs < 65535))
+                port = portArgs;
+            else{
+                System.out.println("You specified port "+portArgs+" is invalid.");
+                System.out.println("Valid port range is between 1024 to 65535, exclusive");
+                //return false;
+            }
+
+        } 
 
         System.out.println("\n===========Wheel HTTP Server============");
         System.out.println("    It's really reinvent-the-wheel. ");
         System.out.println("=========================================\n");
 
-        //port that will be listened
-        int port = 80;  //defaul port
-
-        //user specified port
-        if(args.length == 1){
-            int portArgs = Integer.parseInt(args[0]);
-            if(portArgs > 0 && portArgs < 65535)
-                port = portArgs;
-        }       
-
-        ServerSocket serversocket = null;
-
-        System.out.println("Start to listen on port " + Integer.toString(port) + "...");
+        System.out.println("Trying to bind on port " + Integer.toString(port) + "...");
         
+        ServerSocket serversocket = null;
         //create server socket object on specified port
         try{
             serversocket = new ServerSocket(port);
         }
         catch(Exception e) { 
             System.out.println("Error:" + e.getMessage());
-            return;
+            //return false;
         }
-        
+
+        System.out.println("Ready, Waiting for requests coming...");
+
         //infinite loop for listening port
         while(true) {
-            System.out.println("\nReady, Waiting for requests comming...");
+            
             try {
-
                 //accepting a connection from a client
                 Socket connectionSocket = serversocket.accept();
-                
-                InetAddress client = connectionSocket.getInetAddress();
-                
-                //print client's name and IP address
-                System.out.println(client.getHostName() + " connected to the server.");
-                System.out.println("--whose ip Address is "+client.getHostAddress());
 
-                //buffered reader for reading client's request
-                BufferedReader input = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-
-                //buffered writer for returning the server's response
-                BufferedWriter output = new BufferedWriter(new OutputStreamWriter(connectionSocket.getOutputStream()));
-
-                //parse the request under HTTP 1.0 protocol
-                parseHttpRequest(input, output);
-
-                input.close();
-                output.close();
+                //create a new thread to handle this connection
+                ConnectionThread connection = new ConnectionThread(connectionSocket);
 
             }
-            catch(Exception ex) { 
+            catch(Exception ex) {
                 System.out.println("Error: " + ex.getMessage());
             }
 
         } 
     }
 
+}
+
+class ConnectionThread extends Thread {
+
+    Socket connectionSocket = null;
+
+    public ConnectionThread(Socket connectionSocket){
+        this.connectionSocket = connectionSocket;
+        start();
+    }
+
+    public void run(){
+        try{
+            InetAddress client = connectionSocket.getInetAddress();
+            
+            //print client's name and IP address
+            System.out.println("\n"+client.getHostName() + " connected to the server.");
+            System.out.println("--whose ip Address is "+client.getHostAddress());
+
+            System.out.println("Processing request...");
+            long tid = Thread.currentThread().getId();
+            System.out.println("Current Working Thread's id is " + tid);
+
+            //buffered reader for reading client's request
+            BufferedReader input = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+
+            //buffered writer for returning the server's response
+            BufferedWriter output = new BufferedWriter(new OutputStreamWriter(connectionSocket.getOutputStream()));
+
+            //parse the request under HTTP 1.0 protocol
+            parseHttpRequest(input, output);
+
+            connectionSocket.close();
+        } 
+        catch(Exception ex){
+            System.out.println("Error: " + ex.getMessage());
+        }       
+    }
+
     /*
      * Implementation of HTTP 1.0 protocol
      * Arguments: input, the received http request; output, the returned response
      */
-    private static void parseHttpRequest(BufferedReader input, BufferedWriter output) {
+    private void parseHttpRequest(BufferedReader input, BufferedWriter output) {
         
         //code for current supported method
         // 0 for unimplement method
@@ -248,7 +277,7 @@ public class WheelServer{
      * Build Http Response Header
      * Arguments: statusCode, http response status code; contentType, content type
      */
-    private static String buildHttpResponseHeader(int statusCode, int contentType) {
+    private String buildHttpResponseHeader(int statusCode, int contentType) {
         
         final String httpProtocolVersion = "HTTP/1.0 ";
         //http status code
